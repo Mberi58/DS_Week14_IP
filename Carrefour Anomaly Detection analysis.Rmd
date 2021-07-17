@@ -1,0 +1,118 @@
+---
+title: "Anomaly Detection Analysis"
+author: "Ann Mberi"
+date: "7/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading some libraries
+
+
+```{r}
+library(dplyr)
+library(magrittr)
+library(knitr)
+library(tidyverse)
+```
+
+
+**ANOMALY DETECTION**
+
+# Reading and previewing the dataset
+```{r}
+ano <- read.csv("http://bit.ly/CarreFourSalesDataset")
+head(ano)
+```
+
+This is to detect whether there are any anomalies in the given sales dataset.
+
+# Checking the dimensions of our dataset
+```{r}
+dim(ano)
+```
+
+# Checking the structure of our dataset
+```{r}
+str(ano)
+```
+
+
+# Checking the Statistical summary
+```{r}
+summary(ano)
+```
+
+# Checking for null values
+```{r}
+colSums(is.na(ano))
+```
+
+# Changing the date column from character to Date
+```{r}
+ano <- transform(ano, Date = format(as.Date(Date, "%m/%d/%Y"), "%Y/%m/%d"))
+ano <- transform(ano, Date = as.Date(Date))
+sapply(ano, class)
+```
+
+# Grouping the dataset by the Date column
+```{r}
+Sales <- ano$Sales
+Date <- ano$Date
+ano = ano %>% arrange(Date)
+```
+ 
+## Lets preview our dataset 
+```{r}
+head(ano)
+```
+
+##Sales Distribution
+### sort dates in ascending order
+```{r}
+ano_sales <- ano[order(ano$Date),]
+head(ano_sales)
+```
+
+## Plotting Histogram to show sales distribution
+
+```{r}
+hist(ano$Sales)
+```
+
+# Transactions Count
+# We’ll group the transactions per day then tally them
+```{r}
+ano_count <- ano %>% group_by(Date) %>% tally()
+colnames(ano_count) <- c("Date", "Count")
+head(ano_count)
+```
+
+## Visualizing Transaction count .
+
+
+
+```{r}
+library(anomalize)
+```
+
+```{r}
+ano_count %>%
+time_decompose(Count) %>%
+anomalize(remainder) %>%
+plot_anomaly_decomposition() +
+ggtitle("Transaction Count: Anomaly Decomposition")
+```
+
+# Visualizing Transaction count.
+```{r}
+ano_count %>%
+time_decompose(Count) %>%
+anomalize(remainder) %>%
+time_recompose() %>%
+plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5) +
+ggtitle("Transaction Count: Anomaly Recomposition")
+```

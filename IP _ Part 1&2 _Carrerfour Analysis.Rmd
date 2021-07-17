@@ -1,0 +1,862 @@
+---
+title: "Marketing Analysis"
+author: "Ann Mberi"
+date: "7/17/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**#. Business Understanding**
+
+###a. Defining the Question
+You are a Data analyst at Carrefour Kenya and are currently undertaking a project that will
+inform the marketing department on the most relevant marketing strategies that will result
+in the highest no. of sales (total price including tax). Hence making an analysis to Customer
+Data from a the supermarket and implement dimensionality reduction.
+
+
+###b. Defining the Metrics of Success
+The success of this analysis will occur when we analysis the customer data to understand it
+fully and later implementing the appropriate dimensionality reduction techniques.
+
+
+###c. Context
+Dimensionality reduction is the process of reducing the number of random variables under
+review, by getting a set of principal variables. It can be divided into feature selection and
+feature extraction and is important for the visualization of features while it also helps deal
+with multicollinearity of the features.
+
+###d. Experimental Design
+We will define the question, the metric of success, context and experimental design taken. This
+will be followed by reading and exploring the dataset and its appropriateness of the available
+data to answer the given question. This will be followed by cleaning the data off outliers,
+anomalies and null values from missing data, perfom an exploratory data analysis after which
+we will Implement feature extraction and feature selection,record our observations and provide
+a conclusion and reccomendation.
+
+###e. Data Relevance
+Our data is very relevant to our research question.
+
+**# 1. Importing the Libraries**
+
+```{r}
+library("data.table")
+```
+
+```{r}
+library("plyr")
+```
+
+```{r}
+library("dplyr")
+```
+
+```{r}
+library("ggplot2")
+```
+
+
+```{r}
+library("tidyverse")
+```
+
+```{r}
+library("tidyr")
+library("lubridate")
+```
+
+```{r}
+library("ggcorrplot")
+library("ggplot2")
+library("corrplot")
+
+```
+
+
+```{r}
+library("moments")
+library("xtable")
+library("countrycode")
+library("class")
+library("rpart")
+library("rpart.plot")
+library("mlbench")
+library("e1071")
+```
+
+
+```{r}
+library("rpart")
+library("caret")
+
+```
+
+
+
+```{r}
+library("ranger")
+library("kernlab")
+
+```
+
+
+```{r}
+install.packages("devtools", repo="http://cran.us.r-project.org")
+library(devtools)
+install_github("vqv/ggbiplot")
+```
+
+```{r}
+library("devtools")
+```
+
+
+```{r}
+library(ggbiplot)
+```
+
+
+
+```{r}
+library("ISLR")
+library("devtools")
+```
+
+
+**# 2. Loading the Dataset.**
+
+```{r}
+cf_df <- read.csv(url("http://bit.ly/CarreFourDataset"))
+```
+
+**# 3. PREVIEWING THE DATA**
+
+```{r}
+head(cf_df) #we preview  the first 6 rows in our dataset 
+```
+
+
+```{r}
+tail(cf_df) # We preview the last 6 rows of our dataset
+```
+
+
+
+
+#### Data Dimensions
+
+
+```{r}
+dim(cf_df)
+```
+
+From our dataset we can see we have 1000 rows and 10 columns 
+
+#### Data Structure 
+
+```{r}
+str(cf_df)
+```
+
+
+
+**# 4. DATA PREPARATION**
+
+### a)  Uniformity
+
+# Lets check the column names 
+```{r}
+colnames(cf_df)
+```
+
+
+## Lets's rename some columns 
+
+
+```{r}
+names(cf_df)[1]<- "Invoice_ID"
+names(cf_df)[3]<- "Customer_type"
+names(cf_df)[5]<- "Product_line"
+names(cf_df)[6]<- "Unit_price"
+names(cf_df)[14]<- "Gross_income"
+
+```
+
+
+## Lets run the columns in our dataset to preview if the changes have been implemented for uniformality purposes 
+
+```{r}
+colnames(cf_df)
+```
+
+
+# Lets check the length of unique values in each column 
+
+
+```{r}
+lapply(cf_df, function (x) {length(unique(x))})
+```
+
+## Lets check if the tax and gross income columns are duplicated 
+
+
+```{r}
+unique(cf_df$Tax == cf_df$Gross_income)
+```
+
+## Its confirmed they are duplicated, we now drop the gross margin percentage 
+
+```{r}
+cf_df <- cf_df[, -8]
+cf_df <- cf_df[, -12]
+```
+
+
+```{r}
+dim(cf_df)
+```
+The gross income percentage has one unique variable making it not important in our analysis 
+
+### b) Completeness 
+
+## Lets check for missing values 
+
+```{r}
+colSums(is.na(cf_df))
+```
+
+## Checking for duplicated values 
+
+```{r}
+duplicates <- cf_df[duplicated(cf_df),]
+duplicates
+```
+
+## checking for outliers
+## We plot boxplots for all numerical variables 
+
+```{r}
+par(mfrow=c(3,2))
+boxplot((cf_df$"Unit_price"), horizontal = TRUE, col = "grey", main = "Unit_price")
+boxplot((cf_df$"Quantity"), horizontal = TRUE, col = "maroon", main = "Quantity")
+boxplot((cf_df$"Gross"), horizontal = TRUE, col = "green", main = "Gross_income")
+boxplot((cf_df$"cogs"), horizontal = TRUE, col = "orange", main = "cogs")
+boxplot((cf_df$"Total"), horizontal = TRUE, col = "purple", main = "Total")
+boxplot((cf_df$"Rating"), horizontal = TRUE, col = "skyblue", main = "Rating")
+```
+
+# We have a few outliers but they will not be removed, they may have vital information
+
+**# 5. Exploratory Data Analysis**
+
+
+**Univariate Analysis** 
+
+
+## We now check our data summary 
+
+```{r}
+summary(cf_df)
+```
+
+## Measures of Central Tendancy and Dispersion 
+
+##Central Tendancy - Mode, Mean and Median                          
+### Unit Price
+### Mean
+
+
+```{r}
+mean(cf_df$Unit_price)
+```
+### Mode 
+### We first a mose function. This is because R has no built in function 
+
+```{r}
+getmode <- function(v) {
+uniqv <- unique(v)
+uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+
+
+```{r}
+mode.up <- getmode(cf_df$Unit_price)
+mode.up
+```
+
+### Median
+
+```{r}
+median(cf_df$Unit_price)
+```
+
+### Gross_Income 
+
+### Mean
+
+```{r}
+mean(cf_df$Gross_income)
+```
+
+###Mode 
+```{r}
+mode.gi <- getmode(cf_df$Gross_income)
+mode.gi
+```
+### Median
+
+```{r}
+median(cf_df$Gross_income)
+```
+
+### Quantity
+
+### Mode 
+```{r}
+mode.quan <- getmode(cf_df$Quantity)
+mode.quan
+```
+### Mean
+
+```{r}
+mean(cf_df$Quantity)
+```
+
+###Median
+
+```{r}
+median(cf_df$Quantity)
+```
+
+### Cogs
+```{r}
+mode.cogs <- getmode(cf_df$cogs)
+mode.cogs
+```
+
+
+```{r}
+mean(cf_df$cogs)
+```
+
+
+```{r}
+median(cf_df$cogs)
+```
+
+
+
+### Total
+
+```{r}
+mode.total <- getmode(cf_df$Total)
+mode.total
+```
+
+
+```{r}
+mean(cf_df$Total)
+```
+
+
+```{r}
+median(cf_df$Total)
+```
+
+
+### Rating
+```{r}
+mode.rating <- getmode(cf_df$Rating)
+mode.rating
+```
+
+
+```{r}
+mean(cf_df$Rating)
+```
+
+
+```{r}
+median(cf_df$Rating)
+```
+
+## Histogram
+### Unit Price 
+
+```{r}
+hist((cf_df$"Unit_price"), col = "Violet", main = "Unit Price")
+
+```
+
+
+
+## Range
+### Unit Price
+### Standard deviation 
+```{r}
+sd.p <- sd(cf_df$Unit_price)
+sd.p
+```
+
+
+
+### Variance
+```{r}
+var.p <- var(cf_df$Unit_price)
+var.p
+```
+
+### Range
+```{r}
+range.p <- range(cf_df$Unit_price)
+range.p
+```
+
+### Skewness
+```{r}
+skew.p <- skewness(cf_df$Unit_price)
+skew.p
+```
+### Kurtosis
+```{r}
+kurt.p <- kurtosis(cf_df$Unit_price)
+kurt.p
+```
+
+
+## Gross income
+```{r}
+hist((cf_df$"Gross_income"), col = "orange", main = "Gross Income")
+```
+
+### Standard Deviation
+```{r}
+sd.gi <- sd(cf_df$Gross_income)
+sd.gi
+```
+
+### Variance 
+```{r}
+var.gi <- var(cf_df$Gross_income)
+var.gi
+```
+
+### Range
+```{r}
+range.gi <- range(cf_df$Gross_income)
+range.gi
+```
+
+### Skewness
+```{r}
+skew.gi <- skewness(cf_df$Gross_income)
+skew.gi
+```
+
+### Kurtosis
+```{r}
+kurt.gi <- kurtosis(cf_df$Gross_income)
+kurt.gi
+```
+
+
+## Quantity
+```{r}
+hist((cf_df$"Quantity"), col = "skyblue", main = "Quantity")
+```
+### Standard Deviation 
+```{r}
+sd.qty <- sd(cf_df$Quantity)
+sd.qty
+```
+
+### Variance 
+```{r}
+var.qty <- var(cf_df$Quantity)
+var.qty
+```
+
+### Range 
+```{r}
+range.qty <- range(cf_df$Quantity)
+range.qty
+```
+
+
+### Skewness
+```{r}
+skew.qty <- skewness(cf_df$Quantity)
+skew.qty
+```
+
+### Kurtosis
+```{r}
+kurt.qty <- kurtosis(cf_df$Quantity)
+kurt.qty
+```
+
+
+## Cogs
+```{r}
+hist((cf_df$"cogs"), col = "orange", main = "Cogs")
+```
+
+
+```{r}
+sd.cogs <- sd(cf_df$cogs)
+sd.cogs
+```
+
+
+
+```{r}
+var.cogs <- var(cf_df$cogs)
+var.cogs
+```
+
+
+```{r}
+range.cogs <- range(cf_df$cogs)
+range.cogs
+```
+
+```{r}
+skew.cogs <- skewness(cf_df$cogs)
+skew.cogs
+```
+
+```{r}
+kurt.cogs <- kurtosis(cf_df$cogs)
+kurt.cogs
+```
+
+
+## Total
+```{r}
+hist((cf_df$"Total"), col = "grey", main = "Total")
+```
+
+
+
+
+```{r}
+sd.total <- sd(cf_df$Total)
+sd.total
+```
+
+
+```{r}
+var.total <- var(cf_df$Total)
+var.total
+```
+
+
+```{r}
+range.total <- range(cf_df$Total)
+range.total
+```
+
+
+```{r}
+skew.total <- skewness(cf_df$Total)
+skew.total
+```
+
+```{r}
+kurt.total <- kurtosis(cf_df$Total)
+kurt.total
+```
+
+
+## Rating
+```{r}
+hist((cf_df$"Rating"), col = "beige", main = "Rating")
+```
+
+
+```{r}
+sd.r <- sd(cf_df$Rating)
+sd.r
+```
+
+
+```{r}
+var.r <- var(cf_df$Rating)
+var.r
+```
+
+
+```{r}
+range.r <- range(cf_df$Rating)
+range.r
+```
+
+
+```{r}
+skew.r <- skewness(cf_df$Rating)
+skew.r
+```
+
+
+```{r}
+kurt.r <- kurtosis(cf_df$Rating)
+kurt.r
+```
+
+
+# Barplots
+### Branches
+
+```{r}
+barplot(table(cf_df$Branch), main = "Branches")
+```
+
+OBSERVATION 
+
+A has most activity to B and C though there is very little difference between them. 
+
+### Customer Type
+```{r}
+barplot(table(cf_df$Customer_type), main = "Customer Type")
+```
+
+
+OBSERVATION 
+Transaction between members and non-members are equal. 
+
+### Gender 
+
+```{r}
+barplot(table(cf_df$Gender), main = "Gender")
+```
+
+OBSERVATION
+No match difference between genders 
+
+
+### Product line 
+
+
+```{r}
+barplot(table(cf_df$Product_line), main = "Bar chart of Product Line", las=2) 
+```
+
+
+OBSERVATION 
+It seems electronics and accessories and food and berverages are the most popular product lines.
+
+
+### Payment
+
+```{r}
+barplot(table(cf_df$Payment), main = "Payment")
+```
+
+OBSERVATION 
+
+Most clients prefer using cash and Ewallet for payment transaction
+
+
+**Bivariate Analysis**
+## Lets create a new dataframe with numerical data variables 
+```{r}
+Unit_price<- cf_df$Unit_price
+Gross_income<-cf_df$Gross_income
+cogs<-cf_df$cogs
+Total<-cf_df$Total
+Rating<-cf_df$Rating
+num_data <- data.frame(Unit_price, Gross_income, cogs, Total, Rating)
+```
+
+## Lets preview our dataset
+
+```{r}
+head(num_data)
+```
+
+
+# CORRELATION
+
+Correlation is a statistical technique that can show whether and how strongly pairs of variables are related.
+
+## Lets calculate correlation matrix
+```{r}
+corr <- cor(num_data)
+head(corr)
+```
+## Lets plot the correlation matrix 
+
+
+```{r}
+ggcorrplot(corr,hc.order = TRUE)
+```
+
+OBSERVATION 
+
+There was a problem,  We observe that most of the variables are perfectly correlated which is problematic in modelling hence the need
+for feature extraction or feature selection.
+
+## Scatterplot
+
+
+```{r}
+par(mfrow=c(2,4))
+plot(num_data$Gross_income,num_data$Total, main="Total vs. Gross income")
+plot(num_data$cogs, num_data$Total, main="Total vs. cogs")
+plot(num_data$Unit_price, num_data$Total, main="Total vs. Unit price")
+plot(num_data$Unit_price,num_data$cogs, main="Unit price vs. cogs")
+plot(num_data$Unit_price,num_data$Gross_income, main="Unit price vs. Gross_income")
+plot(num_data$Unit_price,num_data$Total, main="Unit price vs. Total")
+
+```
+
+**## 7. IMPLEMENTING THE SOLUTION**
+
+**PRINCIPAL COMPONENT ANALYSIS**
+
+
+### Selecting the numerical data
+```{r}
+cf_df_num <- select_if(cf_df,is.numeric)
+str(cf_df_num)
+```
+
+```{r}
+ef.pca <- prcomp(cf_df_num, center = FALSE, scale. = TRUE)
+summary(ef.pca)
+
+```
+
+### Lets look at our PCA object using the str function 
+```{r}
+str(ef.pca)
+```
+
+PC1 explains 90% of the total variance, which means that more than three-quarters of the information in the dataset can be encapsulated by just that one Principal Component. PC2 explains 6.1% of the variance, PC3 - 2.2% and PC4- 0.4%
+
+
+## Lets now plot our PCA 
+
+```{r}
+set.seed(123)
+ggbiplot(ef.pca, labels=rownames(ef.pca),ellipse = TRUE,obs.scale=1,var.scale=1)
+```
+
+OBSERVATION 
+Our plotting is not so clear we will need to see the number of components that contribute more to PC1 
+
+
+```{r}
+plot(ef.pca, type="l")
+```
+
+
+We have 6 components that contribute more but PC1 contribute the most in this analysis 
+
+**NEXT PART** : Feature Selection 
+
+
+# Calculating the correlation matrix
+```{r}
+corrmatrix <- cor(num_data)
+```
+
+# Find attributes that are highly correlated
+```{r}
+highcorr <- findCorrelation(corrmatrix, cutoff=0.75)
+```
+
+# Highly correlated attributes
+
+
+```{r}
+highcorr
+```
+
+```{r}
+names(num_data[highcorr])
+```
+
+# Removing Redundant Features
+```{r}
+num_data_clean <- num_data[-highcorr]
+```
+
+
+# Performing our graphical comparison
+```{r}
+par(mfrow = c(1, 2))
+corrplot(corrmatrix, order = "hclust")
+corrplot(cor(num_data_clean), order = "hclust")
+```
+
+
+OBSERVATION
+Removing highly correlated variables result to less correlated variables. Hence the selected features are Unit_Price, Total and Rating. There are no more highly correlated variables.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

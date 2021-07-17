@@ -1,0 +1,153 @@
+---
+title: "IP - Part3 Association Rules"
+author: "Ann Mberi"
+date: "7/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+**ASSOCIATION RULES**
+
+# Installing and reading the necessary packages for the association rules analysis
+#install.packages("arules", dependencies = TRUE)
+
+
+```{r}
+library(arules)
+```
+
+# Reading and previewing the dataset as transactions
+```{r}
+sdf <- read.transactions("http://bit.ly/SupermarketDatasetII")
+```
+
+## Lets preview our transaction dataset 
+
+```{r}
+head(sdf)
+```
+# Checking the dimensions of the data
+```{r}
+dim(sdf)
+
+```
+The dataset has 7501 transactions and 5729 columns
+
+
+## Displaying the structure of our dataset
+```{r}
+str(sdf)
+```
+
+# Verifying the class of the object
+```{r}
+class(sdf)
+```
+
+# Previewing the first few items in the dataset
+```{r}
+inspect(sdf[1:6])
+```
+
+# Previewing the items in the dataset as if it were in a dataframe
+```{r}
+items<-as.data.frame(itemLabels(sdf))
+colnames(items) <- "Item"
+head(items, 5)
+```
+
+
+
+# Getting the summary statistics of the data
+```{r}
+summary(sdf)
+```
+
+
+
+# Exploring the frequency of some articles
+```{r}
+itemFrequency(sdf[, 7:11],type = "absolute")
+```
+
+
+# Producing a chart of frequencies and filtering to consider only items with a minimum percentage of support
+```{r}
+par(mfrow = c(1, 3))
+```
+
+# plot the frequency of items
+```{r}
+itemFrequencyPlot(sdf, topN = 10,col="grey")
+itemFrequencyPlot(sdf, support = 0.1,col="orange")
+```
+
+
+OBSERVATION 
+
+The top 10 most common items in the
+transactions dataset are tea, wheat, mineral water, fat, yoghurt,  french fries, frozen vegetables
+
+
+# Setting the parameters for our association analysis
+```{r}
+rules <- apriori (sdf, parameter = list(supp = 0.001, conf = 0.8))
+```
+
+
+
+Rules Observation
+## We have a set of 271 rules 
+
+
+## Observing rules built in our model
+
+```{r}
+inspect(rules[1:10])
+```
+
+## Lets building a apriori model with Min Support as 0.002 and confidence as 0.8.
+```{r}
+rules2 <- apriori (sdf,parameter = list(supp = 0.002, conf = 0.8))
+```
+
+OBSERVATION Rule 2
+We have a set of 99 rules 
+
+## Lets building apriori model with Min Support as 0.002 and confidence as 0.6.
+
+```{r}
+rules3 <- apriori (sdf, parameter = list(supp = 0.001, conf = 0.6))
+```
+
+OBSERVATION Rule 3, 
+we have a set of 319 rules 
+
+
+## We Perform an exploration of our model using the summary function
+```{r}
+summary(rules)
+```
+
+
+## Lets Observing rules built in our model i.e. first 7 model rules
+```{r}
+inspect(rules[1:7])
+```
+## We are Ordering the rules by a criteria such as the level of confidence then looking at the first five rules.
+```{r}
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+
+
+
+
+
+
+
